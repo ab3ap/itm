@@ -1,0 +1,415 @@
+C     Code comes from "Prediction of Tropospheric Radio Transmission
+C     Loss Over Irregular Terrain, A Computer Method-1968", Longley and
+C     Rice.
+C
+C     I started with the OCR code from the report and fixed the many
+C     errors.  Typing from scratch might have been faster.  Corrections
+C     were also made as given in errata.  The original, uncorrected
+C     lines remain, commented out with "C!!!".
+C
+C     Mike Markowski, mike.ab3ap@gmail.com
+C     Dec 2022
+
+      PROGRAM COMTE
+C     PROGRAM TO DETERMINE PARAMETERS AND WRITE OUTPUT
+C
+      COMMON /M/F,D,NS,A,DH,DHS,S,E,POL,KM
+      COMMON /MP/ H1E,H2E,H1G,H2G,DLS1,DLS2,DL1,DL2,DL,DLS,TE1,TE2,TE,KL
+      COMMON /MLDS/ AG,AD,AS,ACR,AED,MD,AH50,AH5,D5,MS,AES,DX,H5
+      COMMON /ML/ D0,D1,D01,D02,A0,A1,K1,K2,AL,ALS,A0G
+C!!!  DIMENSION ANS(3),DKM(6),DELH(6),SD(6),SA(6)
+      DIMENSION ANS(3),DKM(6),SD(6),SA(6)
+      REAL NS,MD,MDO,MS,MSS,MDS,K1,K2,K3,K4,LBF
+      DATA (ANS=290.,290.,312.)
+      DATA (DKM=5.,10.,20.,30.,50.,80.)
+C!!!  DATA (DELH=105.,165.,234.,315.,575.)
+C
+C     CALCULATION OF INPUT PARAMETERS
+C
+      S=.005  $  E=15.
+      DO 500 IX=1,3
+      NS=ANS(IX)
+      A=6370./(1.-.04665*EXPF(.005577*NS))
+      WRITE ( 2,56)1
+56    FORMAT (R1)
+      IF (IX .EQ. 1) WRITE ( 2,57)
+      IF (IX .EQ. 2) WRITE ( 2,58)
+      IF (IX .EQ. 3) WRITE ( 2,59)
+57    FORMAT (2X,*COLORADO PLAINS   NS=290.*//)
+58    FORMAT (2X,*COLORADO MOUNTAINS   NS=290.*//)
+59    FORMAT (2X,*OHIO   NS=312.*//)
+      DO 400 I=1,9
+      KK=0
+      DO 300 IZ=1,6
+      IF (IX .EQ. 2 .AND. IZ .EQ. 6) GO TO 300
+      IF (IX .EQ. 3 .AND. (IZ .EQ. 1 .OR. IZ .EQ. 6)) GO TO 300
+      D=DKM(IZ)
+      DH=DHS=90.
+      IF (IX .EQ. 2) DH=DHS=650.
+      F=100.
+      IF (I .GT. 6) F=50.
+      IF (I .EQ. 9) F=20.
+      POL=+1.
+      IF (I .GT. 3 .AND. I .LT. 7) POL=-1.
+      H1G=H1E=4.
+      IF (IX .NE. 3 .AND. I .EQ. 9) H1G=H1E=3.3
+      IF (IX .EQ. 3 .AND. I .GT. 6) H1G=H1E=4.24
+      IF (IX .EQ. 3 .AND. I .EQ. 9) H1G=H1E=3.68
+      H2G=H2E=3.
+      IF (I .EQ. 2 .OR. I .EQ. 5) H2G=H2E=6.
+      IF (I .EQ. 3 .OR. I .EQ. 6) H2G=H2E=9.
+      IF (IX .EQ. 3 .AND. I .EQ. 7) H2G=H2E=1.
+      IF (IX .NE. 3 .AND. I .EQ. 7) H2G=H2E=.55
+      IF (IX .NE. 3 .AND. I .EQ. 8) H2G=H2E=1.7
+      IF (IX .NE. 3 .AND. I .EQ. 9) H2G=H2E=1.3
+      DLS1=SQRTF(.002*A*H1E)
+      DLS2=SQRTF(.002*A*H2E)
+      DLS=DLS1+DLS2
+C!!!  DL1=DLS1*EXPF(-.07*SQRTF(DH/H1E))
+C!!!  DL2=DLS2*EXPF(-.07*SQRTF(DH/H2E))
+      DL1=DLS1*EXPF(-.07*SQRTF(DH/MAX(5,H1E)))
+      DL2=DLS2*EXPF(-.07*SQRTF(DH/MAX(5,H2E)))
+      DL=DL1+DL2
+      TE1=(.00065/DLS1)*((DLS1/DL1-1.)*DH-3.077*H1E)
+      TE2=(.00065/DLS2)*((DLS2/DL2-1.)*DH-3.077*H2E)
+      TE=MAX1F((TE1+TE2),(-DL/A))
+      KK=KK+1
+      IF (D .GT. DLS) GO TO 40
+      CALL LOS
+      SD(KK)=D
+      SA(KK)=ACR
+      GO TO 300
+40    CALL DIFF
+      SD(KK)=D
+      SA(KK)=ACR
+      IF (IX .EQ. 1 .AND. KK .NE. 6) GO TO 300
+      IF (IX .EQ. 2 .AND. KK .NE. 5) GO TO 300
+      IF (IX .EQ. 3 .AND. KK .NE. 4) GO TO 300
+      AE=A0G-K1*D0-K2*ALOG10(D0)
+C
+C     WRITE OUTPUT
+C
+      WRITE ( 2,60) F,DH,H1G,H2G,TE,DX
+60    FORMAT (4X,*F=*F6.1,*   DH=*F6.2,*   H1G=*F6.2,*   H2G=*F6.2,
+     C*   TE=*F10.6,*   DX=*F8.2)
+      WRITE ( 2,61) AE,K1,K2,DLS,ALS
+61    FORMAT (4X,*AE=*F8.2,*   K1=*F10.5,*   K2=*F10.5,*   DLS=*F8.2,
+     C*   ALS=*F8.2)
+      ADX=AED+MD*DX
+      WRITE( 2,62) AED,MD,AES,MS,ADX
+62    FORMAT (4X,*AED=*F8.2,*   MD=*F10.5,*   AES=*F8.2,*   MS=*F10.5,
+     C*   ADX=*F8.2)
+      WRITE ( 2,63) (SD(JZ), JZ=1,KK)
+      WRITE ( 2,64) (SA(JZ), JZ=1,KK)
+63    FORMAT (4X,'D'6F10.2)
+64    FORMAT (4X,'A'6F10.2)
+      WRITE ( 2,56)
+300   CONTINUE
+400   CONTINUE
+500   CONTINUE
+      CALL EXIT
+      END
+
+      SUBROUTINE DIFF
+C     SUBROUTINE TO COMPUTE DIFFRACTION ATTENUATION
+C
+      COMMON /NR/ JZ,W,SW3,SW4,SA3,SA4,SAFO
+          COMMON /MAR14/D3,D4,T5
+      COMMON /M/F,D,NS,A,DH,DHS,S,E,POL,KM
+      COMMON /MP/ H1E,H2E,H1G,H2G,DLS1,DLS2,DL1,DL2,DL,DL5,TE1,TE2,TE,KL
+      COMMON /MLDS/ AG,AD,AS,ACR,AED,MD,AH50,AH5,D5,MS,AES,DX,H5
+      REAL NS,MD,MDO,MS,MSS,MDS,K1,K2,K3,K4
+      FNA(C)=6.02+9.11*C-1.27*C*C
+      FNB(C)=12.953+20.*ALOG10(C)
+      FNC(C)=416.4*F**.3333333333*(1.607-C)
+      FND(C)=(.36278/(C*F)**.3333333333)*1/((E-1.)**2+X*X)**.25
+      FNE(C)=C*SQRTF(E*E+X*X)
+      RDL=DL
+      KK=0
+10    KK=KK+1
+      D3=DL+.5*(A*A/F)**.3333333333
+      IF (D3 .LT. DLS) D3=DLS
+      D4=D3+(A*A/F)**.3333333333
+      T3=TE+D3/A
+      T4=TE+D4/A
+C
+C     CALCULATION OF KNIFE EDGE DIFFRACTION
+C
+      V13=1.2915*T3*SQRTF(F*DL1*(D3-DL)/(D3-DL2))
+      V23=1.2915*T3*SQRTF(F*DL2*(D3-DL)/(D3-DL1))
+      V14=1.2915*T4*SQRTF(F*DL1*(D4-DL)/(D4-DL2))
+      V24=1.2915*T4*SQRTF(F*DL2*(D4-DL)/(D4-DL1))
+      AV13=FNA(V13)
+      IF(V13 .GT. 2.4) AV13=FNB(V13)
+      AV23=FNA(V23)
+      IF(V23.GT.2.4) AV23=FNB(V23)
+      AV14=FNA(V14)
+      IF(V14.GT.2.4) AV14=FNB(V14)
+      AV24=FNA(V24)
+      IF(V24.GT.2.4) AV24=FNB(V24)
+      AK3=AV13+AV23
+      AK4=AV14+AV24
+C
+C     CALCULATION OF ROUNDED EARTH DIFFRACTION
+C
+      A1=DL1*DL1/(.002*H1E)
+      A2=DL2*DL2/(.002*H2E)
+      A3=(D3-DL)/T3
+      A4=(D4-DL)/T4
+      X=18000.*S/F
+      K1=FND(A1)
+      K2=FND(A2)
+      K3=FND(A3)
+      K4=FND(A4)
+      IF (POL .EQ. -1.) GO TO 15
+      K1=FNE(K1)
+      K2=FNE(K2)
+      K3=FNE(K3)
+      K4=FNE(K4)
+15    B1=FNC(K1)
+      B2=FNC(K2)
+      B3=FNC(K3)
+      B4=FNC(K4)
+      X1=B1*DL1/A1**.6666666666
+      X2=B2*DL2/A2**.66666666666
+      X3=B3*(D3-DL)/A3**.666666666+X1+X2
+      X4=B4*(D4-DL)/A4**.666666666+X1+X2
+      XL1=450./ABSF(ALOG10(K1)**3)
+      XL2=450./ABSF(ALOG10(K2)**3)
+      IF(X1.GT.0..AND.X1.LE. 200. .AND.K1 .GE. 0..AND. K1.LE. .00001)
+     C16,17
+16    T=40.*ALOG10(X1)-117.
+      T1=-117.
+      T2=MIN1F((ABSF(T)),(ABSF(T1)))
+      FX1=T
+      IF (T2 .EQ. ABSF(T1)) FX1=T1
+17    IF(X2.GT.0..AND. X2.LE.200. .AND. K2 .GE.0..AND. K2.LE. .00001)
+     C18,19
+18    T=40.*ALOG10(X2)-117.
+      T1=-117.
+      T2=MIN1F((ABSF(T)),(ABSF(T1)))
+      FX2=T
+      IF (T2 .EQ. ABSF(T1)) FX2=T1
+19    IF(X1 .GT.0. .AND.X1 .LE.200. .AND.K1 .GT. .00001 .AND. K1 .LT. 1.
+     C) 21,22
+21    FX1=40.*ALOG10(X1)-117.
+      IF (X1 .LE. XL1) FX1=20.*ALOG10(K1)+2.5*1. E-5*X1*X1/K1-15.
+C!!!22    IF(X2 .GT.0. .AND.X2 .LE.200 .AND.K2 .GT. .00001 .AND. K1 .LT. 1.
+22    IF(X2 .GT.0. .AND.X2 .LE.200 .AND.K2 .GT. .00001 .AND. K2 .LT. 1.
+     C) 23,24
+23    FX2=40.*ALOG10(X2)-117.
+      IF (X2 .LE. XL2) FX2=20.*ALOG10(K2)+2.5*1. E-5*X2*X2/K2-15.
+24    W1=.0134*X1*EXPF(-.005*X1) $ W2=.0134*X2*EXPF(-.005*X2)
+      IF(X1.GT.200. .AND. X1.LE.2000.)
+     C FX1=W1*(40.*ALOG10(X1)-117.)+(1.-W1)*(.05751*X1-10.*ALOG10(X1))
+      IF(X2 .GT. 200 .AND. X2 .LE. 2000.)
+     CFX2=W2*(40.*ALOG10(X2)-117.)+(1.-W2)*(.05751*X2-10.*ALOG10(X2))
+      IF(X1.GT. 2000.) FX1=.05751*X1-10.*ALOG10(X1)
+      IF(X2 .GT. 2000.) FX2=.05751*X2-10.*ALOG10(X2)
+      GX3=.05751*X3-10.*ALOG10(X3)
+      GX4=.05751*X4-10.*ALOG10(X4)
+      AR3=GX3-FX1-FX2-20.
+      AR4=GX4-FX1-FX2-20.
+
+C
+C     COMBINATION OF ROUNDED EARTH AND KNIFE EDGE DIFFRACTION
+C
+28    DHD3=DH*(1.-.8 *EXPF(-.02*D3))
+      DHD4=DH*(1.-.8 *EXPF(-.02*D4))
+      P13=SQRTF((H1E*H2E)/(H1G*H2G))+(A*TE+DL)/D3
+      P14=SQRTF((H1E*H2E)/(H1G*H2G))+(A*TE+DL)/D4
+      DOL3=MIN1F(1000.,(DHD3*F/299.7925))
+      DOL4=MIN1F(1000.,(DHD4*F/299.7925))
+63    W3=1./(1.+.1     *SQRTF(DOL3*P13))
+      W4=1./(1.+.1     *SQRTF(DOL4*P14))
+31    A3=(1.-W3)*AK3+W3*AR3
+      A4=(1.-W4)*AK4+W4*AR4
+      MD=(A4-A3)/(D4-D3)
+      AED=A4-MD*D4
+      DHDLS=DH*(1.-.8*EXPF(-.02*DLS))
+      SHDLS=.78*DHDLS*EXPF(-.5*(DHDLS**.25))
+      AFO=5.*ALOG10(1.+H1G*H2G*F*SHDLS*.00001)
+      AFO=MIN1F(AF0,15.)
+91    AED=AED+AFO
+      IF (KM .EQ. 2) GO TO 40
+      IF (KK.EQ. 2) GO TO 20
+         SAFO=AFO
+      SW3=W3  $  SW4=W4  $  SA3=A3  $  SA4=A4
+29    AD=AED+MD*D
+32    TD=(TE+D/A)*D
+      SDL1=DL1  $  SDL2=DL2  $  SDL=DL  $  STE1=TE1  $  STE2=TE2
+      STE=TE
+C
+C     CALCULATION OF SCATTER ATTENUATION
+C
+      CALL SCATT
+      IF (H5 .LE. 10.)  AES=AH5 -MS*D5
+      IF (H5 .LE. 10.) AS=AES+MS*D
+      IF(H5.LE.10.) GO TO 30
+      MDS=MD
+      AEDS=AED
+      DH=0.
+      GO TO 10
+20    ADO=AED
+      MDO=MD
+      MD=MOS
+      AED=AEDS
+      DX1=(AH50-MS*D5-ADO)/(MD0-MS)
+      DX2=(RDL+.25*(A*A/F)**.3333333333*ALOG10(F))
+      DXO=DX1*(3.-.2*H5)+DX2*(.2*H5-2.)
+      AXO=ADO+MDO*DXO
+      ASX=AXO+(AH5-AH50)
+      AES=ASX-MS*DXO
+      AS=AES+MS*D
+30    DX=(AES-AED)/(MD-MS)
+      DXN=DL+.25*(A*A/F)**.3333333333*ALOG10(F)
+C!!!  IF (DXN .GT. DX) AES=AED+(MD-MS)*DX
+      IF (DXN .GT. DX) AES=AED+(MD-MS)*DXN
+      IF (DXN .GT. DX) AS=AES+MS*D
+      IF (DXN .GT. DX) DX=DXN
+      ACR=AD
+      IF (D .GT. DX) ACR=AS
+      DL1=SDL1  $  DL2=SDL2  $  DL=SDL  $  TE1=STE1  $  TE2=STE2
+      TE=STE
+      DH=DHS
+41    CONTINUE
+40    RETURN
+      END
+
+      SUBROUTINE SCATT
+C     SUBROUTINE TO COMPUTE SCATTER PARAMETERS
+C
+      COMMON /M/F,D,NS,A,DH,DHS,S,E,POL,KM
+      COMMON /MP/ H1E,H2E,H1G,H2G,DLS1,DLS2,DL1,DL2,DL,DLS,TE1,TE2,TE,KL
+      COMMON /MAR14/D3,D4,T5
+      COMMON /MLDS/ AG,AD,AS,ACR,AED,MD,AH50,AH5,D5,MS,AES,DX,H5
+      REAL NS,MD,MDO,MS,MSS,MDS,K1,K2,K3,K4
+      KK=0
+10    KK=KK+1
+      D5=DL+ 200.
+      D6=DL+ 400.
+11    T5=TE+D5/A
+      T6=TE+D6/A
+      H5=MIN1F(((1./H1E +1./H2E)/(T5*F*ABSF(.007-.058*T5))), (15.))
+      H6=MIN1F(((1./H1E+1./H2E)/(T6*F*ABSF(.007-.058*T6))),(15.))
+      S5=H5+10.*ALOG10(F*T5**4)-.1*(NS-301.)*EXPF(-T5*D5/40.)
+      S6=H6+10.*ALOG10(F*T6**4)-.1*(NS-301.)*EXPF(-T6*D6/40.)
+      IF(T5*D5 .LE.10.) AH5=S5+103.4+.332*T5*D5-10.*ALOG10(T5*D5)
+      IF(T6*D6 .LE.10.)AH6=S6+103.4+.332*T6*D6-10.*ALOG10(T6*D6)
+      IF(T5*D5 .GT. 10. .AND.T5*D5.LE. 70.) AH5=S5+97.1+.212*T5*D5-2.5*
+     CALOG10(T5*D5)
+      IF(T6*D6 .GT. 10. .AND.T6*D6 .LE. 70.) AH6=S6+97.1+.212*T6*D6-2.5
+     C*ALOG10(T6*D6)
+      IF(T5*D5 .GT. 70.) AH5=S5+86.8+.157*T5*D5+5.*ALOG10(T5*D5)
+      IF(T6*D6 .GT. 70.) AH6=S6+86.8+.157*T6*D6+5.*ALOG10(T6*D6)
+      MS=(AH6-AH5)/(D6-D5)
+      IF (KK .EQ. 2) GO TO 25
+      IF (H5 .EQ. 10) GO TO 30
+      IF (KK .EQ. 1) GO TO 20
+25    MS=MSS
+      AH50=AH5
+      AH5=AH5S
+      D5=D5S
+      GO TO 30
+20    DH=0.
+C!!!  DL1=DLS1*EXPF(-.07*SQRTF(DH/H1E))
+C!!!  DL2=DLS2*EXPF(-.07*SQRTF(DH/H2E))
+      DL1=DLS1*EXPF(-.07*SQRTF(DH/MAX(5,H1E)))
+      DL2=DLS2*EXPF(-.07*SQRTF(DH/MAX(5,H2E)))
+      DL=DL1+DL2
+C!!!  TE1=(.00065/DLS1)*((DLS1/DL1-1.)*DH-3.077*H1G)
+C!!!  TE2=(.00065/DLS2)*((DLS2/DL2-1.)*DH-3.077*H2G)
+      TE1=(.00065/DLS1)*((DLS1/DL1-1.)*DH-3.077*H1E)
+      TE2=(.00065/DLS2)*((DLS2/DL2-1.)*DH-3.077*H2E)
+      TE=MAX1F((TE1+TE2),(-DL/A))
+      T=TE+D/A
+      AH5S=AH5
+      MSS=MS
+      D5S=D5
+      GO TO 10
+30    CONTINUE
+      RETURN
+      END
+
+      SUBROUTINE LOS
+C     SUBROUTINE TO COMPUTE LINE OF SIGHT ATTENUATION
+C
+      COMMON /M/F,D,NS,A,DH,DHS,S,E,POL,KM
+      COMMON /NR/ JZ,W,SW3,SW4,SA3,SA4,SAFO
+      COMMON /MP/ H1E,H2E,H1G,H2G,DLS1,DLS2,DL1,DL2,DL,DLS,TE1,TE2,TE,KL
+      COMMON /MLDS/ AG,AD,AS,ACR,AED,MD,AH50,AH5,D5,MS,AES,DX,H5
+      COMMON /ML/ D0,D1,D01,D02,A0,A1,K1,K2,AL,ALS,A0G
+      REAL NS,MD,MDO,MS,MSS,MDS,K1,K2,K3,K4,M
+      KM=2
+      CALL DIFF
+      KM=0
+C
+C     CALCULATION OF TWO RAY THEORY
+C
+      D01=.00004*H1E*H2E*F
+      D02=MIN1F((-AED/MD),(DL-2.))
+      IF (AED .GE. 0.) DO=MIN1F(D01,(.5*DL))
+      IF (AED .LT. 0.) DO=.5*DL
+      IF (AED .LT. 0. .AND. D02 .GE. D0) D0=D02
+      D1=D0+.25*(DL-D0)
+      IF (D1 .LE. D0) D1=D0+.25*(DLS-D0)
+      J=0  $  DS=D
+      IF (J.EQ. 0) D=D0
+22    DIV=1.  $  PSI=ATANF((H1E+H2E)/(1000.*D))
+2     DHD=DH*(1.-.8 *EXPF(-.02*D))
+      SH=.78*DHD*EXPF(-.5*DHD**.25)
+      SP=SINF(PSI)
+      X=18000.*S/F
+      P2=(SQRTF((E-COSF(PSI)*COSF(PSI))**2+X*X)+E-COSF(PSI)*COSF(PSI))/2
+     C.
+      P=SQRTF(P2)
+      Q=X/(2.*P)
+      IF (POL .EQ. 1.)B=(E*E+X*X)/(P2+Q*Q)
+      IF(POL .EQ. -1.)B=1./(P2+Q*Q)
+      IF (POL .EQ. 1.)M=2.*(P*E+Q*X)/(P2+Q*Q)
+      IF (POL .EQ. -1.)M=2.*P/(P2+Q*Q)
+      R2=(1.+B*SP*SP-M*SP)/(1.+B*SP*SP+M*SP)
+      RE=SQRTF(SP)
+      SQEXF=SQRTF(R2)*EXPF(-.0209584473*F*SH*SP)*DIV
+      IF (SQEXF .GT. .5 .AND. SQEXF .GT. RE)  RE=SQEXF
+      C=ATANF(Q/(P+SP))-ATANF(Q/(P-SP))
+      IF (POL .EQ. -1.)GO TO 40
+      Y1=(X*SP+Q)/(E*SP+P)
+      Y2=(X*SP-Q)/(E*SP-P)
+      IF (E*SP .GE. P) C=ATANF(Y1)-ATANF(Y2)+3.141592654
+      IF (E*SP .LT. P .AND. P*SP .GT. .5) C=ATANF(Y1)+ATANF(Y2)
+      IF (E*SP .LT. P .AND. P*SP .LE. .5) C=ATANF(Y1)-ATANF(Y2)
+40    IF (J .EQ. 0)
+     CA0=-10.*ALOG10(1.+RE*RE-2.*RE*COSF(.000041917*F*H1E*H2E/D0-C))
+      IF (J .EQ. 1) GO TO 3
+      D=D1  $  J=1
+      GO TO 22
+3     CONTINUE
+      D=DS
+      IF (J .EQ. 1)
+     CA1=-10.*ALOG10(1.+RE*RE-2.*RE*COSF(.000041917*F*H1E*H2E/D1-C))
+C
+C    COMBINATION OF TWO RAY THEORY AND DIFFRACTION
+C
+      ALS=AED+MD*DLS
+      AL=AED+MD*DL
+      DED0=AED+MD*D0
+      DED1=AED+MD*D1
+      SA0=A0  $  SA1=A1
+C!!!  W=(MIN1F(H1E,H2E)/MAX1F(H1E,H2E))/(1.+F*DH*.0001)
+      W=1./(1.+F*DH*.0001)
+      A0=MIN1F((W*A0+(1.-W)*DED0),DED0)
+      A1=MIN1F((W*A1+(1.-W)*DED1),DED1)
+10    K2=((ALS-A0)*(D1-D0)-(A1-A0)*(DLS-D0))/((D1-D0)*ALOG10(DLS/D0)-
+     C(DLS-D0)*ALOG10(D1/D0))
+      K2=MAX1F(K2,0.)
+      K1=((ALS-A0)-K2*ALOG10(DLS/D0))/(DLS-D0)
+      IF (K1 .GE. 0.) GO TO 50
+      K1=0.
+      K2=(ALS-A0)/(ALOG10(DLS/D0))
+50    AG=A0+K1*(D-D0)+K2*ALOG10(D/D0)
+      IF (AG .LT. 0.) AG=0.
+51    A0G=A0
+53    ACR=AG
+      RETURN
+      END

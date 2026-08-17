@@ -1,0 +1,216 @@
+# This is a sample input file to the program lr.py.  It is possible to use
+# ITM in either the terrain profile or area mode by using the correct
+# keywords.  Line order is unimportant except that 'run' is imediately
+# executed, so must occur only after all needed values are set.
+# The examples and comments below are meant to be self-explanatory.
+#
+# Despite that, there are challenges in creating a config file for your
+# experiment.  There are 2 sets of indices used that ITM needs.
+# The first are transmission modes.  After median path loss is calculated,
+# quantiles of attenuation fine tune path loss based on variabilies in the
+# different modes of communication.  The modes with indices are:
+#   0: single try success
+#   1: random broadcast receiver
+#   2: mobile service
+#   3: broadcast service
+# For example: modeVar 2
+#
+# The second set of indices indicate climate at station location:
+#   0: Equatorial
+#   1: Continental subtropical
+#   2: Maritime subtropical
+#   3: Desert
+#   4: Continental temperate
+#   5: Maritime temperate, overland
+#   6: Maritime temperate, oversea
+# For example: climate 3
+#
+# There are also several environmental vlues that must be looked up.
+# Keywords are listed along with sources to find the values:
+#
+# epsilon: Average relative ground permittivity.  See Table 2 in "Prediction
+#          of Tropospheric Radio Transmission Loss Over Irregular Terrain, A
+#          Computer Method-1968," Longley, Rice.
+# sigma:   Average relative ground conductivity.  See Table 2 in "Prediction
+#          of Tropospheric Radio Transmission Loss Over Irregular Terrain, A
+#          Computer Method-1968," Longley, Rice.
+# N0:      Surface refractivity at sea level in N-units.  See Figure 4.1 in
+#          "Transmission Loss Predictions for Tropospheric Communication
+#          Circuits," 1965, Rice, Longley, Norton, and Barsis.
+# deltaH:  Terrain is characterized by average roughness. See Section I.3.2
+#          in "Transmission Loss Predictions for Tropospheric Communication
+#          Circuits," NTIA/ITS, 1967, Rice, Longley, Norton, Barsis.
+#
+# Table 2, mentioned in epsilon and sigma above, is reproduced here:
+#
+# Surface Type   sigma   epsilon
+# Poor ground    0.001   4
+# Average ground 0.005   15
+# Good ground    0.02    25
+# Sea water      5       81
+# Fresh water    0.01    81
+#
+# Brief descriptions of all recognized keywords follow:
+#
+# climate   as described above.
+# deltaH    For area mode.  Calculated from terrain data in profile mode.
+# dist      three space-separated floats: start stop delta
+# epsilon   as described above.
+# freq      MHz, frequency.
+# hgtRx     m, receive antenna height above surface.
+# hgtTx     m, transmit antenna height above surface.
+# modeVar   as described above.
+# N0        as described above.
+# Ns        surface refractivity in N-units.  In profile mode, if <=0,
+#           zSys & Ns are calculated from terrain data.
+# pathLen   km, total path length of a profile.
+# pfl       space-separated floats, terrain elevations above sea # level.
+# pol       v(ertical) or h(orizontal), antenna polarity.
+# pTitle    title of terrain profile.
+#
+#           The three quantiles are lists of percentages, space-separated.
+# qLoc      quantiles of location, 50% for point to point mode.
+# qTime     quantiles of time (also reliability levels).
+# qSit      quantiles of situations (also confidence levels).
+# run       'area' or 'profile', type of simulation to run.
+# sigma     as described above.
+# sitingRx  r(andom), c(areful) or v(ery careful), accuracy of receive
+#           station site location.
+# sitingTx  r, c or v, accuracy of transmits station site location.
+# title     title of simulation.
+# zSys      m, system elevation above sea level.
+#
+# Also, from experiment to experiment, previous values are used unless
+# updated.
+#
+# Please email if more detail is needed.  Thanks!
+#
+# Mike Markowski, mike.ab3ap@gmail.com
+# May 2023
+
+############################
+
+# 1st experiment, area mode.
+#
+# For area mode this program (not ITM) requires a single qTime and qLoc.
+# Multiple qSit are expected but not required.
+
+title Area Test Problem 1
+climate 4
+modeVar 2   # Mobile service.
+dist 10 90 10    # dist start stop delta
+dist 100 400 25  # m (meters)
+deltaH 200  # m, terrain roughness factor.
+epsilon 15  # Relative ground permittivity, F/m.
+freq 400    # MHz, frequency.
+hgtRx 1     # m, receive antenna height above surface.
+hgtTx 10    # m, transmit antenna height above surface.
+N0 301      # Sea level refractivity.
+pol v       # v or h
+qLoc 50     # Percent, quantile of locations result is reliable.
+qTime 70    # Percent, quantile of times result is reliable.
+qSit 10 50 90 95 # Percent, quantiles of situations or confidence levels.
+sigma 0.005 # Relative ground conductivity, S/m.
+sitingRx r  # r, c or v, receive station siting.
+sitingTx c  # r(andom), c(areful) or v(ery careful), tx station siting.
+run area
+
+############################
+
+# 2nd experiment, area mode.  Same as ex 1 but with new freq.  The frequency
+# is close enough to ITM's lower edge of 20 MHZ that it will prompt a warning.
+freq 25     # MHz, frequency.
+title Area Test Problem 2
+run area
+
+############################
+
+# 3rd experiment, area mode.
+deltaH 90
+dist 10 140 10
+dist 150 500 50
+epsilon 15
+freq 100
+hgtRx 3
+hgtTx 3
+modeVar 3
+N0 301
+pol v
+qTime 50
+qLoc 50
+qSit 50 90 10
+sigma 0.005
+sitingRx r
+sitingTx r
+run area
+
+############################
+
+# 4th experiment, area mode.
+climate 6
+deltaH 30
+epsilon 25
+freq 1200
+hgtRx 1000
+hgtTx 5
+modeVar 1
+N0 350
+pol h
+qLoc 50
+qTime 10
+sigma 0.02
+sitingRx r
+sitingTx r
+title Area Test Problem 4
+zSys 300 # m, system elevation above seq level.
+run area
+
+############################
+
+pTitle Crystal Palace to Mursley, England
+pathLen 77.8 # Total path length in km.
+pfl  96  84  65  46  46  46  61  41  33  27  23  19  15  15  15
+pfl  15  15  15  15  15  15  15  15  15  17  19  21  23  25  27
+pfl  29  35  46  41  35  30  33  35  37  40  35  30  51  62  76
+pfl  46  46  46  46  46  46  50  56  67 106  83  95 112 137 137
+pfl  76 103 122 122  83  71  61  64  67  71  74  77  79  86  91
+pfl  83  76  68  63  76 107 107 107 119 127 133 135 137 142 148
+pfl 152 152 107 137 104  91  99 120 152 152 137 168 168 122 137
+pfl 137 170 183 183 187 194 201 192 152 152 166 177 198 156 127
+pfl 116 107 104 101  98  95 103  91  97 102 107 107 107 103  98
+pfl  94  91 105 122 122 122 122 122 137 137 137 137 137 137 137
+pfl 137 140 144 147 150 152 159
+
+climate 4 # Continental temperate.
+epsilon 15
+freq 100
+lvar 5
+Ns 314
+pol h
+qSit 50 90 10 # Percent, confidence levels.
+sigma 0.005
+zSys 0
+
+############################
+
+# 5th experiment, profile mode.
+#
+# For profile mode this program (not ITM) expects multiple qTime (reliability
+# levels) and multiple qSit (confidence levels).  This example reuses qSit
+# defined in a previous example for confidence levels.
+title Profile Test 1, Path 2200 (Measured Median LB=133.2 dB)
+freq 41.5
+hgtTx 143.9
+hgtRx 8.5
+qTime 1 10 50 90 99 # Percent, reliability levels.
+run pfl
+
+############################
+
+# 6th experiment, profile mode.
+title Profile Test 2, Path 1979 (Measured Median LB=149.5 dB)
+freq 573.3
+hgtTx 194
+hgtRx 9.1
+run pfl
+

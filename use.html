@@ -1,0 +1,109 @@
+<html>
+<body>
+<pre>
+U s i n g   i t m . p y   s u b r o u t i n e s
+
+The following two sets of python-like pseudo code show how to use ITM in the
+area and point-to-point modes.  Since aVar() returns the path loss above free
+space, the function itm.freespace_dB(f_Hz, r_m) can be used.  f_Hz is
+frequency in Hz, and r_m is distance from antenna in meters.  If atten_dB is
+aVar's return value, path loss is atten_dB + itm.freespace_dB(...).
+
+###########################################################################
+
+The following three lists of constants are used with ITM set up calls.
+
+1 .   c L i s t - climate names to assign to itm.prop['klim']:
+cEquatorial    # Equatorial.
+cContSubtrop   # Continental subtropical.
+cMariSubtrop   # Marine subtropical.
+cDesert        # Desert.
+cContTemp      # Continental temperate.
+cMariTempLand  # Maritime temperate, overland.
+cMariTempSea   # Maritime temperate, oversea.
+
+2 .   m L i s t - modes of variability to use with mdvarSet().
+mClear  # Clear mdvar setting.
+# Exactly one of following 4 is chosen.
+mSingle # Single message mode.
+mRandom # Individual/Random receiver of broadcast.
+mMobile # Mobile mode.
+mBcast  # Broadcast mode.
+# Additional mdvarSet() calls can be used to set one or both of following:
+mPfl    # Point-to-point mode.
+mIfere  # Interference problem, set quantile of situation to 50%.
+
+3 .   e L i s t - error names to use with itm.errorGet():
+eNone      # No error.
+#   W a r n i n g s
+eQuantiles # Warning: quantile < isf(0.1%) == 3.1.
+eClimate   # Warning: climate was not set.  Set to Continental Temperate.
+eDist1k    # Warning: distance > 1000 km, nearly out of range.
+eModeVar   # Warning: mode of variability was not set.  Use Single Message.
+eFreqWarn  # Warning: frequency not in [40, 1000] MHz.
+eAntWarn   # Warning: antenna structure height not in [1, 1000] m.
+#   E r r o r s
+eDistBad   # Error: distance not in interval [1km, 2000km] or is less
+           #        than 5x(ant effective hgts difference).
+eAntErr    # Error: antenna struct height not in [0.5, 3000] km.
+eHorizErr  # Error: smooth earth horizon not in [0.1, 3] times rough earth's.
+eNsErr     # Error: Ns not in [250, 400] N-units.
+eECurveErr # Error: earth curvature not in [75e-9, 250e-9].
+eImpedErr  # Error: for ground impedance Z, real(Z) < |imag(Z)|.
+eFreqErr   # Error: frequency not in [20, 2000] MHz.
+
+###########################################################################
+
+To use the area prediction mode:
+
+  #   S e t   u p   I T M
+  import itm
+  itm.dictionaries()          # Prepare ITM.
+  itm.prop['f_MHz'] = ...     # MHz, transmit carrier frequency.
+  itm.prop['hg'][0] = ...     # m, transmit antenna structure height.
+  itm.prop['hg'][1] = ...     # m, receive antenna structure height.
+  itm.prop['dh'] = ...        # m, roughness factor for region.
+  itm.prop['klim'] = itm.c... # One of cList climate constants.
+  itm.prop['ens'] = ...       # N-units, regional refractivity.
+  itm.mdvarSet(itm.m...)      # Mode of variability mList constant.
+  itm.lrPrep(...)             # Calculate constants used throughout ITM.
+
+  #   R u n   I T M   i n   A r e a   M o d e
+  itm.lrArea(...)
+  for dist in range(...)      # km, distances.
+    itm.lrProp(dist)          # Longley-Rice propagation.
+    for i in range(nq)        # Loop for selected quantiles.
+      a_dB, sigmaS = itm.aVar(...) # Variability statistics.
+      ...use result a_dB...   # a_dB is atten, sigmaS to calculate confidence.
+  itm.errors()                # Or check itm.errorGet().
+
+###########################################################################
+
+To use the point-to-point mode:
+
+  #   S e t   u p   I T M
+  import itm
+  itm.dictionaries()          # Prepare ITM.
+  itm.prop['f_MHz'] = ...     # MHz, transmit carrier frequency.
+  itm.prop['hg'][0] = ...     # m, transmit antenna structure height.
+  itm.prop['hg'][1] = ...     # m, receive antenna structure height.
+  itm.prop['klim'] = itm.c... # One of cList climate constants.
+  itm.prop['ens'] = ...       # N-units, regional refractivity.
+  itm.mdvarSet(itm.m...)      # Mode of variability mList constant.
+  itm.mdvarSet(itm.mPfl)      # Point-to-point, or profile, mode.
+  itm.lrPrep(...)             # Calculate constants used throughout ITM.
+
+  #   R u n   I T M   i n   P r o f i l e   M o d e
+  # Terrain defined by (rng[i],pfl[i]), points need not be equidistant.
+  rng = ...                     # m range from antenna, terrain profile.
+  pfl = ...                     # m above sea level, terrain profile.
+  itm.lrProfile(rng, pfl)       # Longley-Rice propagation.
+  elTx_rad = itm.prop['the'][0] # If needed, RF takeoff angle at transmitter.
+  elRx_rad = itm.prop['the'][1] # If needed, RF takeoff angle at receiver.
+  for i in range(nq)            # Loop for selected quantiles.
+    a_dB, sigmaS = itm.aVar(...) # Variability statistics.
+    ...use result a_dB...       # a_dB is atten, sigmaS to calculate confidence.
+  itm.errors()                  # Or check itm.errorGet().
+</pre>
+</body>
+</html>
